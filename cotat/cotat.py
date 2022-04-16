@@ -291,10 +291,5 @@ def main(date_str, nodes, edges):
     plot = Tabs(tabs=tabs)
 
     # export
-    output_file(f"{date_str}_contact_tracing_visual.html", title=date_str)
+    output_file(date_str, title=date_str)
     save(plot)
-
-
-
-if __name__ == '__main__':
-    main()
