@@ -1,0 +1,48 @@
+version: 2.1
+orbs:
+  codecov: codecov/codecov@1.0.2
+jobs:
+  build:
+    docker:
+      - image: circleci/python:3.8.4
+
+    working_directory: ~/repo
+
+    steps:
+      - checkout
+
+      - restore_cache:
+          key: deps1-{{ .Branch }}-{{ checksum "test_requirements.txt" }}
+
+      - run:
+          name: install
+          command: |
+            python -m venv venv
+            . venv/bin/activate
+            pip install -r test_requirements.txt
+
+      - run:
+          name: run tests and generate coverage
+          command: |
+            . venv/bin/activate
+            coverage run -m pytest
+            coverage xml
+
+      - codecov/upload:
+          file: coverage.xml
+          token: $CODECOV_TOKEN
+
+      - run:
+          name: run linting via flake8
+          command: |
+            . venv/bin/activate
+            flake8 cotat
+
+      - save_cache:
+          key: deps1-{{ .Branch }}-{{ checksum "test_requirements.txt" }}
+          paths:
+            - "venv"
+
+      - store_artifacts:
+          path: test-reports
+          destination: test-reports
