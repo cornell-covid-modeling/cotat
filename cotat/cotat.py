@@ -3,8 +3,6 @@ import networkx as nx
 import pandas as pd
 import numpy as np
 from datetime import datetime
-from sqlalchemy import create_engine
-from sqlalchemy.sql import text
 from typing import List, Tuple, Dict
 
 # bokeh imports
