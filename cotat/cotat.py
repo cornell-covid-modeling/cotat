@@ -161,7 +161,7 @@ def main(date_str, nodes, edges, start, end):
         node_source = graph_renderer.node_renderer.data_source
 
         button_code = f"""
-        var case_numbers = source.data["case_number"]
+        var case_numbers = source.data["case"]
 
         for (let i = 0; i < source.data["alpha"].length; i++) {{
             source.data["alpha"][i] = {NODE_ALPHA_DEFAULT}
@@ -172,10 +172,8 @@ def main(date_str, nodes, edges, start, end):
         """
 
         text_code = f"""
-        var case_num = this.value
-        var case_numbers = source.data["case_number"]
-
-        console.log(case_numbers)
+        var case_num = parseInt(this.value)
+        var case_numbers = source.data["case"]
 
         if (case_numbers.includes(case_num)) {{
             var n = case_numbers.indexOf(case_num)
@@ -185,7 +183,7 @@ def main(date_str, nodes, edges, start, end):
                     source.data["size"][i] = {NODE_SIZE_SELECTED}
                 }} else {{
                     source.data["alpha"][i] = {NODE_ALPHA_UNSELECTED}
-                    source.data["size"][i] = {NODE_ALPHA_UNSELECTED}
+                    source.data["size"][i] = {NODE_SIZE_UNSELECTED}
                 }}
             }}
 
