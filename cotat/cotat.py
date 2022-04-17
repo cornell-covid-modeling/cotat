@@ -16,6 +16,54 @@ from bokeh.models import (HoverTool, TapTool, ColumnDataSource, LabelSet, TextIn
                           Button, CustomJS, Circle, MultiLine, Panel, Tabs)
 
 
+def contact_graph(nodes: pd.DataFrame, edges: pd.DataFrame,
+                  membership_cols: List[str] = None) -> nx.Graph:
+    """Return a graph representing the contact tracing data.
+
+    Edges are given an "edge_type" attribute which is "contact" for contact
+    tracing data. For each membership column, edges are added between nodes
+    that are members of the same group. The "edge_type" of these edges is the
+    name of the membership column (E.g. membership column is "club" and nodes
+    both belonging to "Club A" have an edge between them). Edges with
+    "edge_type" set to "contact" have attribute "dummy" set to 0; otherwise, 1.
+
+    Args:
+        nodes (pd.DataFrame): Each row is node with column for every attribute.
+        edges (pd.DataFrame): Dataframe with "source" and "target" columns.
+        membership_cols (List[str]): List of columns recognized as memberships.
+
+    Returns:
+        nx.Graph: Contact tracing graph.
+    """
+    nodes = nodes.copy()
+    edges = edges.copy()
+
+    # edge attributes
+    edges["dummy"] = 0
+    edges["edge_type"] = "contact"
+    G = nx.from_pandas_edgelist(edges, edge_attr=["dummy", "edge_type"])
+
+    # node attributes
+    nodes = nodes.reset_index().rename(columns={'index': 'id'})
+    G.add_nodes_from(nodes["id"])
+    node_attr = nodes.set_index("id").to_dict("index")
+    nx.set_node_attributes(G, node_attr)
+
+    # add membership dummy edges
+    for membership_col in membership_cols:
+        groups = nodes[membership_col].value_counts().to_dict()
+        for group, n in groups.items():
+            if group != "" and n > 1:
+                members = list(nodes[nodes[membership_col] == group].index)
+                for i in range(len(members)):
+                    for j in range(len(members)):
+                        if i < j and not G.has_edge(members[i], members[j]):
+                            G.add_edge(members[i], members[j], dummy=1,
+                                       edge_type=membership_col)
+
+    return G
+
+
 def main(date_str, nodes, edges):
 
     def node_positions(G):
@@ -155,10 +203,6 @@ def main(date_str, nodes, edges):
 
         return Panel(child=plot, title=tab_name)
 
-    nodes = nodes.copy()
-    nodes = nodes.reset_index().rename(columns={'index': 'id'})
-    edges = edges.copy()
-
     # TODO: factor this out as a helper method
     # limit nodes
     limit = False
@@ -177,35 +221,11 @@ def main(date_str, nodes, edges):
 
         nodes = nodes.iloc[list(node_indices)]
 
-    # create networkx graph
-    G = nx.Graph()
+    groups = ["group_1", "group_2", "group_3"]
+    G = contact_graph(nodes, edges, membership_cols=groups)
 
-    # add nodes and attributes
-    G.add_nodes_from(nodes['id'])
-    for attribute_name in nodes.columns[1:]:
-        id_to_attr = nodes.set_index('id')[attribute_name].to_dict()
-        nx.set_node_attributes(G, values=id_to_attr, name=attribute_name)
-
-    # add edges
-    if len(edges) > 0:
-        G.add_edges_from(list(edges.apply(lambda x: [x.source, x.target], axis=1)))
-    nx.set_edge_attributes(G, values=0, name="dummy")
-    nx.set_edge_attributes(G, values="contact", name="edge_type")
-
-    # TODO: should be parameter in method call
-    groups = ['group_1', 'group_2', 'group_3']
-
-    # add dummy edges between memebers of same groups
-    for group in groups:
-        orgs = nodes[group].value_counts().to_dict()
-        for k,v in orgs.items():
-            if k != '' and v > 1:
-                members = list(nodes[nodes[group] == k].index)
-                for i in range(len(members)):
-                    for j in range(len(members)):
-                        if i < j and not G.has_edge(members[i], members[j]):
-                            G.add_edge(members[i], members[j], dummy=1, edge_type=group)
-
+    # TODO: remove this later
+    nodes = nodes.reset_index().rename(columns={'index': 'id'})
 
     # set node color of positive cases
     nx.set_node_attributes(G, values=9, name='size')
