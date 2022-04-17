@@ -15,6 +15,28 @@ from bokeh.plotting import from_networkx
 from bokeh.models import (HoverTool, TapTool, ColumnDataSource, LabelSet, TextInput, Div,
                           Button, CustomJS, Circle, MultiLine, Panel, Tabs)
 
+# =============================
+# CONSTANTS
+# =============================
+
+POSITIVE_COLOR = "#DC0000"
+NEGATIVE_COLOR = "#65ADFF"
+NODE_ALPHA_DEFAULT = 1
+NODE_SIZE_DEFAULT = 9
+NODE_ALPHA_SELECTED= 1
+NODE_SIZE_SELECTED = 16
+NODE_ALPHA_UNSELECTED = 0.4
+NODE_SIZE_UNSELECTED = 9
+
+EDGE_ALPHA_CONTACT = 1
+EDGE_ALPHA_DUMMY = 0.2
+EDGE_DASH_CONTACT = []
+EDGE_DASH_DUMMY = [5,5]
+EDGE_WEIGHT_CONTACT = 1
+EDGE_WEIGHT_DUMMY = 0.05
+
+# =============================
+
 
 def contact_graph(nodes: pd.DataFrame, edges: pd.DataFrame,
                   membership_cols: List[str] = None) -> nx.Graph:
@@ -138,36 +160,36 @@ def main(date_str, nodes, edges, start, end):
 
         node_source = graph_renderer.node_renderer.data_source
 
-        button_code = """
+        button_code = f"""
         var case_numbers = source.data["case_number"]
 
-        for (let i = 0; i < source.data["alpha"].length; i++) {
-            source.data["alpha"][i] = 1
-            source.data["size"][i] = 9
-        }
+        for (let i = 0; i < source.data["alpha"].length; i++) {{
+            source.data["alpha"][i] = {NODE_ALPHA_DEFAULT}
+            source.data["size"][i] = {NODE_SIZE_DEFAULT}
+        }}
 
         source.change.emit()
         """
 
-        text_code = """
+        text_code = f"""
         var case_num = this.value
         var case_numbers = source.data["case_number"]
 
         console.log(case_numbers)
 
-        if (case_numbers.includes(case_num)) {
+        if (case_numbers.includes(case_num)) {{
             var n = case_numbers.indexOf(case_num)
-            for (let i = 0; i < source.data["alpha"].length; i++) {
-                if (i == n) {
-                    source.data["alpha"][i] = 1
-                    source.data["size"][i] = 16
-                } else {
-                    source.data["alpha"][i] = 0.4
-                    source.data["size"][i] = 9
-                }
-            }
+            for (let i = 0; i < source.data["alpha"].length; i++) {{
+                if (i == n) {{
+                    source.data["alpha"][i] = {NODE_ALPHA_SELECTED}
+                    source.data["size"][i] = {NODE_SIZE_SELECTED}
+                }} else {{
+                    source.data["alpha"][i] = {NODE_ALPHA_UNSELECTED}
+                    source.data["size"][i] = {NODE_ALPHA_UNSELECTED}
+                }}
+            }}
 
-        }
+        }}
 
         source.change.emit()
         """
@@ -238,29 +260,21 @@ def main(date_str, nodes, edges, start, end):
         # blue if tested positive before 2 weeks of [start] or after [end]
         if pd.isnull(date) or date > end or (start - date).days > offset:
             node_alpha[id] = 1
-            node_color[id] = "#65ADFF"
+            node_color[id] = NEGATIVE_COLOR
         # red if tested positive within 2 weeks of [start] and before [end]
         else:
             node_alpha[id] = alphas[(date - start).days + offset]
-            node_color[id] = "#DC0000"
+            node_color[id] = POSITIVE_COLOR
     nx.set_node_attributes(G, values=node_alpha, name='alpha')
     nx.set_node_attributes(G, values=node_color, name='color')
 
     # set edge properties of dummy vs. actual edges
     dummy_attribute = nx.get_edge_attributes(G, 'dummy').items()
-    edge_alpha = {k:{0:1, 1:0.1}[v] for k,v in dummy_attribute}
+    edge_alpha = {k:{0:EDGE_ALPHA_CONTACT, 1:EDGE_ALPHA_DUMMY}[v] for k,v in dummy_attribute}
     nx.set_edge_attributes(G, values=edge_alpha, name='alpha')
-    edge_dash = {k:{0:[], 1:[5,5]}[v] for k,v in dummy_attribute}
+    edge_dash = {k:{0:EDGE_DASH_CONTACT, 1:EDGE_DASH_DUMMY}[v] for k,v in dummy_attribute}
     nx.set_edge_attributes(G, values=edge_dash, name='dash')
-    edge_weight = {k:{0:1, 1:0.05}[v] for k,v in dummy_attribute}
-    nx.set_edge_attributes(G, values=edge_weight, name='weight')
-
-    # TODO: parameterize this
-    edge_type_to_w = {"contact" : 1}
-    for group in groups:
-        edge_type_to_w[group] = 0.05
-
-    edge_weight = {k:edge_type_to_w[v] for k,v in nx.get_edge_attributes(G, 'edge_type').items()}
+    edge_weight = {k:{0:EDGE_WEIGHT_CONTACT, 1:EDGE_WEIGHT_DUMMY}[v] for k,v in dummy_attribute}
     nx.set_edge_attributes(G, values=edge_weight, name='weight')
 
     # create plot
@@ -268,34 +282,26 @@ def main(date_str, nodes, edges, start, end):
 
     pos = node_positions(G)
 
-    edge_alpha = {k:{0:1, 1:0.1}[v] for k,v in dummy_attribute}
+    edge_alpha = {k:{0:EDGE_ALPHA_CONTACT, 1:EDGE_ALPHA_DUMMY}[v] for k,v in dummy_attribute}
     nx.set_edge_attributes(G, values=edge_alpha, name='alpha')
-    edge_weight = {k:{0:1, 1:0.01}[v] for k,v in dummy_attribute}
-    nx.set_edge_attributes(G, values=edge_weight, name='weight')
 
     tab1 = create_plot(title, 'All', G, pos)
 
-    edge_alpha = {k:{0:1, 1:0}[v] for k,v in dummy_attribute}
+    edge_alpha = {k:{0:EDGE_ALPHA_CONTACT, 1:0}[v] for k,v in dummy_attribute}
     nx.set_edge_attributes(G, values=edge_alpha, name='alpha')
-    edge_weight = {k:{0:1, 1:0}[v] for k,v in dummy_attribute}
-    nx.set_edge_attributes(G, values=edge_weight, name='weight')
 
     tab2 = create_plot(title, 'Contact Traces', G, pos)
 
-    edge_alpha = {k:{0:0, 1:0.2}[v] for k,v in dummy_attribute}
+    edge_alpha = {k:{0:0, 1:EDGE_ALPHA_DUMMY}[v] for k,v in dummy_attribute}
     nx.set_edge_attributes(G, values=edge_alpha, name='alpha')
-    edge_weight = {k:{0:0, 1:1}[v] for k,v in dummy_attribute}
-    nx.set_edge_attributes(G, values=edge_weight, name='weight')
 
     tab3 = create_plot(title, 'Groups', G, pos)
 
     tabs = [tab1, tab2, tab3]
 
     for group in groups:
-        edge_alpha = {k:(0.2 if v == group else 0) for k,v in nx.get_edge_attributes(G, 'edge_type').items()}
+        edge_alpha = {k:(EDGE_ALPHA_DUMMY if v == group else 0) for k,v in nx.get_edge_attributes(G, 'edge_type').items()}
         nx.set_edge_attributes(G, values=edge_alpha, name='alpha')
-        edge_weight = {k:(1 if v == group else 0) for k,v in nx.get_edge_attributes(G, 'edge_type').items()}
-        nx.set_edge_attributes(G, values=edge_weight, name='weight')
 
         tabs.append(create_plot(title, group, G, pos))
 
