@@ -1,0 +1,2 @@
+recursive-include cotat *.js
+recursive-include cotat *.html

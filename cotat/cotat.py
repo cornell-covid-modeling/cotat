@@ -1,4 +1,5 @@
 # general imports
+import pkgutil
 import networkx as nx
 import pandas as pd
 import numpy as np
@@ -34,6 +35,13 @@ EDGE_DASH_CONTACT = []
 EDGE_DASH_DUMMY = [5,5]
 EDGE_WEIGHT_CONTACT = 1
 EDGE_WEIGHT_DUMMY = 0.05
+
+BUTTON_JS = pkgutil.get_data(__name__, "resources/button.js") \
+                   .decode().format(**globals())
+SEARCH_JS = pkgutil.get_data(__name__, "resources/search.js") \
+                   .decode().format(**globals())
+INSTRUCTIONS_HTML = pkgutil.get_data(__name__, "resources/instructions.html") \
+                           .decode().format(**globals())
 
 # =============================
 
@@ -160,37 +168,8 @@ def main(date_str, nodes, edges, start, end):
 
         node_source = graph_renderer.node_renderer.data_source
 
-        button_code = f"""
-        var case_numbers = source.data["case"]
-
-        for (let i = 0; i < source.data["alpha"].length; i++) {{
-            source.data["alpha"][i] = {NODE_ALPHA_DEFAULT}
-            source.data["size"][i] = {NODE_SIZE_DEFAULT}
-        }}
-
-        source.change.emit()
-        """
-
-        text_code = f"""
-        var case_num = parseInt(this.value)
-        var case_numbers = source.data["case"]
-
-        if (case_numbers.includes(case_num)) {{
-            var n = case_numbers.indexOf(case_num)
-            for (let i = 0; i < source.data["alpha"].length; i++) {{
-                if (i == n) {{
-                    source.data["alpha"][i] = {NODE_ALPHA_SELECTED}
-                    source.data["size"][i] = {NODE_SIZE_SELECTED}
-                }} else {{
-                    source.data["alpha"][i] = {NODE_ALPHA_UNSELECTED}
-                    source.data["size"][i] = {NODE_SIZE_UNSELECTED}
-                }}
-            }}
-
-        }}
-
-        source.change.emit()
-        """
+        button_code = BUTTON_JS
+        text_code = SEARCH_JS
 
         button = Button(label="Reset", button_type="default")
         button.js_on_click(CustomJS(args={'source': node_source}, code=button_code))
@@ -202,21 +181,8 @@ def main(date_str, nodes, edges, start, end):
         instructions.toolbar_location=None
         instructions.min_border_top=0
 
-        text = """
-        <b>Instructions:</b><br>
-        Red nodes are positive cases within the last 2 weeks; they are labeled
-        with their case number. Furthermore, the opacity of the node decreases as the
-        time since they tested positive increases, ranging from 1 (today) to 0.5 (2 weeks
-        ago). All other nodes are blue. Solid edges indicate a contact trace.
-        Dashed edges indicate the two nodes are a memeber of the same group. Use the tabs to
-        toggle on and off edges by type. Hover over a node for more information. Search for a
-        case number by typing into the search box above and pressing enter. If the case is found,
-        it will be enlarged. To reset the search, press the reset button. Use the toolbar in the
-        top right to navigate the graph. A blue line indicates the tool is active. Contact Henry
-        Robbins (<a href="mailto:hwr26@cornell.edu">hwr26</a>) with any questions.
-        """
+        text = INSTRUCTIONS_HTML
         instructions = Div(text=text)
-
 
         plot = gridplot([[p], [row(text_input, button, sizing_mode='stretch_both')], [instructions]],
                         toolbar_options={'logo': None})
