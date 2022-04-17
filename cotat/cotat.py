@@ -3,18 +3,15 @@ import pkgutil
 import networkx as nx
 import pandas as pd
 import numpy as np
-from datetime import datetime
-from typing import List, Tuple, Dict
+from typing import List
 
 # bokeh imports
 from bokeh.plotting import figure, output_file, save
-from bokeh.models.widgets.markups import Div
-from bokeh.models.widgets.tables import TableColumn, DataTable
-from bokeh.models.renderers import GlyphRenderer
-from bokeh.layouts import row, gridplot, GridBox
+from bokeh.layouts import row, gridplot
 from bokeh.plotting import from_networkx
-from bokeh.models import (HoverTool, TapTool, ColumnDataSource, LabelSet, TextInput, Div,
-                          Button, CustomJS, Circle, MultiLine, Panel, Tabs)
+from bokeh.models import (HoverTool, ColumnDataSource, LabelSet, TextInput,
+                          Div, Button, CustomJS, Circle, MultiLine,
+                          Panel, Tabs)
 
 # =============================
 # CONSTANTS
@@ -24,7 +21,7 @@ POSITIVE_COLOR = "#DC0000"
 NEGATIVE_COLOR = "#65ADFF"
 NODE_ALPHA_DEFAULT = 1
 NODE_SIZE_DEFAULT = 9
-NODE_ALPHA_SELECTED= 1
+NODE_ALPHA_SELECTED = 1
 NODE_SIZE_SELECTED = 16
 NODE_ALPHA_UNSELECTED = 0.4
 NODE_SIZE_UNSELECTED = 9
@@ -98,21 +95,20 @@ def main(date_str, nodes, edges, start, end):
 
     def node_positions(G):
         """Generate node posititions."""
-        pos = nx.spring_layout(G, k=0.13, weight='weight', seed=1, iterations=150)
-#         pos = nx.random_layout(G)
+        pos = nx.spring_layout(G, k=0.13, weight='weight',
+                               seed=1, iterations=150)
         xs = {k: v[0] for k,v in pos.items()}
         ys = {k: v[1] for k,v in pos.items()}
         nodes['x'] = nodes['id'].apply(lambda x: xs[x])
         nodes['y'] = nodes['id'].apply(lambda x: ys[x])
         return pos
 
-
     def blank_tab_plot(name, plot_width=1500, plot_height=700):
         """Create a blank for a tab."""
         plot = figure(title=name,
-                  plot_width=plot_width,
-                  plot_height=plot_height,
-                  tools="pan,wheel_zoom,box_zoom,reset")
+                      plot_width=plot_width,
+                      plot_height=plot_height,
+                      tools="pan,wheel_zoom,box_zoom,reset")
         plot.toolbar.logo = None
         plot.xgrid.grid_line_color = None
         plot.ygrid.grid_line_color = None
@@ -122,7 +118,6 @@ def main(date_str, nodes, edges, start, end):
         plot.border_fill_color = None
         plot.outline_line_color = None
         return plot
-
 
     def create_graph_renderer(G, pos):
         """Return a graph renderer for graph G with node positions pos."""
@@ -137,7 +132,6 @@ def main(date_str, nodes, edges, start, end):
 
         return graph_renderer
 
-
     def add_case_labels(plot):
         """Add case labels to plot."""
         cases = nodes[~nodes['case'].isna()][['x','y','case']]
@@ -149,15 +143,13 @@ def main(date_str, nodes, edges, start, end):
                           source=case_labels, render_mode='canvas')
         plot.add_layout(labels)
 
-
     def add_hover_labels(plot, graph_renderer):
         """Add hover labels to plot."""
         tooltips = [(attr, f"@{attr}") for attr in nodes.columns[1:]]
         node_hover = HoverTool(tooltips=tooltips,
-                              renderers=[graph_renderer.node_renderer])
+                               renderers=[graph_renderer.node_renderer])
 
         plot.tools.append(node_hover)
-
 
     def create_plot(title, tab_name, G, pos):
         p = blank_tab_plot('%s:  %s' % (title, tab_name))
@@ -172,19 +164,23 @@ def main(date_str, nodes, edges, start, end):
         text_code = SEARCH_JS
 
         button = Button(label="Reset", button_type="default")
-        button.js_on_click(CustomJS(args={'source': node_source}, code=button_code))
+        button.js_on_click(CustomJS(args={'source': node_source},
+                                    code=button_code))
         text_input = TextInput(value="case_number", title="Search Case:")
-        text_input.js_on_change("value", CustomJS(args={'source': node_source}, code=text_code))
+        text_input.js_on_change("value", CustomJS(args={'source': node_source},
+                                                  code=text_code))
 
         instructions = blank_tab_plot("", plot_width=1500, plot_height=50)
         instructions.title.text_font_size = '0pt'
-        instructions.toolbar_location=None
-        instructions.min_border_top=0
+        instructions.toolbar_location = None
+        instructions.min_border_top = 0
 
         text = INSTRUCTIONS_HTML
         instructions = Div(text=text)
 
-        plot = gridplot([[p], [row(text_input, button, sizing_mode='stretch_both')], [instructions]],
+        plot = gridplot([[p],
+                         [row(text_input, button, sizing_mode='stretch_both')],
+                         [instructions]],
                         toolbar_options={'logo': None})
 
         return Panel(child=plot, title=tab_name)
@@ -196,12 +192,15 @@ def main(date_str, nodes, edges, start, end):
     if limit:
         group_name = 'employee'
         group_of_interest = 1
-        node_indices = list(nodes[nodes[group_name] == group_of_interest].index)
+        node_indices = \
+            list(nodes[nodes[group_name] == group_of_interest].index)
 
         if limit_all:
-            edges = edges[(edges['source'].isin(node_indices)) & (edges['target'].isin(node_indices))]
+            edges = edges[(edges['source'].isin(node_indices)) &
+                          (edges['target'].isin(node_indices))]
         else:
-            edges = edges[(edges['source'].isin(node_indices)) | (edges['target'].isin(node_indices))]
+            edges = edges[(edges['source'].isin(node_indices)) |
+                          (edges['target'].isin(node_indices))]
             adjacent = set(edges['source']).union(set(edges['target']))
             node_indices = set(node_indices).union(set(adjacent))
 
@@ -234,19 +233,24 @@ def main(date_str, nodes, edges, start, end):
 
     # set edge properties of dummy vs. actual edges
     dummy_attribute = nx.get_edge_attributes(G, 'dummy').items()
-    edge_alpha = {k:{0:EDGE_ALPHA_CONTACT, 1:EDGE_ALPHA_DUMMY}[v] for k,v in dummy_attribute}
-    nx.set_edge_attributes(G, values=edge_alpha, name='alpha')
-    edge_dash = {k:{0:EDGE_DASH_CONTACT, 1:EDGE_DASH_DUMMY}[v] for k,v in dummy_attribute}
-    nx.set_edge_attributes(G, values=edge_dash, name='dash')
-    edge_weight = {k:{0:EDGE_WEIGHT_CONTACT, 1:EDGE_WEIGHT_DUMMY}[v] for k,v in dummy_attribute}
-    nx.set_edge_attributes(G, values=edge_weight, name='weight')
+
+    edge_attributes = [
+        (EDGE_ALPHA_CONTACT, EDGE_ALPHA_DUMMY, "alpha"),
+        (EDGE_DASH_CONTACT, EDGE_DASH_DUMMY, "dash"),
+        (EDGE_WEIGHT_CONTACT, EDGE_WEIGHT_DUMMY, "weight")
+    ]
+
+    for contact, dummy, name in edge_attributes:
+        alpha = {k:{0:contact, 1:dummy}[v] for k,v in dummy_attribute}
+        nx.set_edge_attributes(G, values=alpha, name=name)
 
     # create plot
     title = 'Contact Tracing Visualization'  # TODO: better title
 
     pos = node_positions(G)
 
-    edge_alpha = {k:{0:EDGE_ALPHA_CONTACT, 1:EDGE_ALPHA_DUMMY}[v] for k,v in dummy_attribute}
+    edge_alpha = {k:{0:EDGE_ALPHA_CONTACT, 1:EDGE_ALPHA_DUMMY}[v]
+                  for k,v in dummy_attribute}
     nx.set_edge_attributes(G, values=edge_alpha, name='alpha')
 
     tab1 = create_plot(title, 'All', G, pos)
@@ -264,7 +268,8 @@ def main(date_str, nodes, edges, start, end):
     tabs = [tab1, tab2, tab3]
 
     for group in groups:
-        edge_alpha = {k:(EDGE_ALPHA_DUMMY if v == group else 0) for k,v in nx.get_edge_attributes(G, 'edge_type').items()}
+        edge_alpha = {k:(EDGE_ALPHA_DUMMY if v == group else 0)
+                      for k,v in nx.get_edge_attributes(G,'edge_type').items()}
         nx.set_edge_attributes(G, values=edge_alpha, name='alpha')
 
         tabs.append(create_plot(title, group, G, pos))
