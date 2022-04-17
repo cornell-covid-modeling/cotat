@@ -64,7 +64,7 @@ def contact_graph(nodes: pd.DataFrame, edges: pd.DataFrame,
     return G
 
 
-def main(date_str, nodes, edges):
+def main(date_str, nodes, edges, start, end):
 
     def node_positions(G):
         """Generate node posititions."""
@@ -230,17 +230,20 @@ def main(date_str, nodes, edges):
     # set node color of positive cases
     nx.set_node_attributes(G, values=9, name='size')
 
-    # TODO: add data range as parameter to method call
-    # TODO: set alpha as a function of the date range given
-    # TODO: set positive color as a function of the data range given
-    alphas = np.linspace(1,0.5,15)
-    to_alpha = {k: alphas[k] for k in range(15)}
-    # TODO: compute node alpha
-    # node_alpha = {k:to_alpha.get(v,1) for k,v in nx.get_node_attributes(G, 'days_since').items()}
-    nx.set_node_attributes(G, values=1, name='alpha')
-
-    # TODO: check if positive is in range
-    node_color = nodes['case'].apply(lambda x: '#65ADFF' if x is None else '#DC0000').to_dict()
+    offset = 14  # days (2 weeks)
+    alphas = list(np.linspace(0.5, 1, (end - start).days + offset + 1))
+    node_alpha = {}
+    node_color = {}
+    for id, date in nx.get_node_attributes(G, "date").items():
+        # blue if tested positive before 2 weeks of [start] or after [end]
+        if pd.isnull(date) or date > end or (start - date).days > offset:
+            node_alpha[id] = 1
+            node_color[id] = "#65ADFF"
+        # red if tested positive within 2 weeks of [start] and before [end]
+        else:
+            node_alpha[id] = alphas[(date - start).days + offset]
+            node_color[id] = "#DC0000"
+    nx.set_node_attributes(G, values=node_alpha, name='alpha')
     nx.set_node_attributes(G, values=node_color, name='color')
 
     # set edge properties of dummy vs. actual edges
