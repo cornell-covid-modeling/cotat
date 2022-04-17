@@ -63,7 +63,7 @@ def main(date_str, nodes, edges):
     def add_case_labels(plot):
         """Add case labels to plot."""
         cases = nodes[~nodes['case'].isna()][['x','y','case']]
-        cases['case'] = cases['case'].astype(str)
+        cases['case'] = cases['case'].astype(int).astype(str)
         case_labels = ColumnDataSource(data=cases)
         labels = LabelSet(x='x', y='y', text='case',
                           x_offset=3, y_offset=3,
@@ -74,17 +74,8 @@ def main(date_str, nodes, edges):
 
     def add_hover_labels(plot, graph_renderer):
         """Add hover labels to plot."""
-        node_hover = HoverTool(tooltips=[("Case_Number", "@case"),
-                                         ("Test_Date", "@test_date"),
-                                         ("Academic_Career", "@academic_career"),
-                                         ("Chapter", "@chapter"),
-                                         ("Sport", "@sport_1"),
-                                         ("Building", "@building"),
-                                         ("Job_Profile_Names", "@job_profile_names"),
-                                         ("Department_Codes", "@department_codes"),
-                                         ("Unit_Codes", "@unit_codes"),
-                                         ("Primary_Work_Address", "@primary_work_address_1"),
-                                         ("Notes", "@notes")],
+        tooltips = [(attr, f"@{attr}") for attr in nodes.columns[1:]]
+        node_hover = HoverTool(tooltips=tooltips,
                               renderers=[graph_renderer.node_renderer])
 
         plot.tools.append(node_hover)
@@ -164,15 +155,11 @@ def main(date_str, nodes, edges):
 
         return Panel(child=plot, title=tab_name)
 
-    # TODO: eliminate need for this
-    # map from the binary strings to integer IDs
+    nodes = nodes.copy()
     nodes = nodes.reset_index().rename(columns={'index': 'id'})
-    # hashed_to_id = {v:k for k,v in nodes['Id'].to_dict().items()}
-    if len(edges) > 0:
-        # edges['source'] = edges['source'].apply(lambda x: hashed_to_id[x])
-        # edges['target'] = edges['target'].apply(lambda x: hashed_to_id[x])
-        edges['edge'] = edges.apply(lambda x: (x.source, x.target), axis=1)
+    edges = edges.copy()
 
+    # TODO: factor this out as a helper method
     # limit nodes
     limit = False
     limit_all = False
@@ -195,17 +182,17 @@ def main(date_str, nodes, edges):
 
     # add nodes and attributes
     G.add_nodes_from(nodes['id'])
-    for attribute in nodes.columns[3:]:
-         nx.set_node_attributes(G, values=nodes.set_index('id')[attribute].to_dict(), name=attribute)
-    nx.set_node_attributes(G, values=0, name="dummy")
-    nx.set_node_attributes(G, values="contact", name="edge_type")
+    for attribute_name in nodes.columns[1:]:
+        id_to_attr = nodes.set_index('id')[attribute_name].to_dict()
+        nx.set_node_attributes(G, values=id_to_attr, name=attribute_name)
 
-    # add edges and attributes
+    # add edges
     if len(edges) > 0:
         G.add_edges_from(list(edges.apply(lambda x: [x.source, x.target], axis=1)))
-        for attribute in edges.columns[:-1]:
-            nx.set_edge_attributes(G, values=edges.set_index('edge')[attribute].to_dict(), name=attribute)
+    nx.set_edge_attributes(G, values=0, name="dummy")
+    nx.set_edge_attributes(G, values="contact", name="edge_type")
 
+    # TODO: should be parameter in method call
     groups = ['group_1', 'group_2', 'group_3']
 
     # add dummy edges between memebers of same groups
@@ -223,7 +210,9 @@ def main(date_str, nodes, edges):
     # set node color of positive cases
     nx.set_node_attributes(G, values=9, name='size')
 
-
+    # TODO: add data range as parameter to method call
+    # TODO: set alpha as a function of the date range given
+    # TODO: set positive color as a function of the data range given
     alphas = np.linspace(1,0.5,15)
     to_alpha = {k: alphas[k] for k in range(15)}
     # TODO: compute node alpha
@@ -235,13 +224,15 @@ def main(date_str, nodes, edges):
     nx.set_node_attributes(G, values=node_color, name='color')
 
     # set edge properties of dummy vs. actual edges
-    edge_alpha = {k:{0:1, 1:0.1}[v] for k,v in nx.get_edge_attributes(G, 'dummy').items()}
+    dummy_attribute = nx.get_edge_attributes(G, 'dummy').items()
+    edge_alpha = {k:{0:1, 1:0.1}[v] for k,v in dummy_attribute}
     nx.set_edge_attributes(G, values=edge_alpha, name='alpha')
-    edge_dash = {k:{0:[], 1:[5,5]}[v] for k,v in nx.get_edge_attributes(G, 'dummy').items()}
+    edge_dash = {k:{0:[], 1:[5,5]}[v] for k,v in dummy_attribute}
     nx.set_edge_attributes(G, values=edge_dash, name='dash')
-    edge_weight = {k:{0:1, 1:0.05}[v] for k,v in nx.get_edge_attributes(G, 'dummy').items()}
+    edge_weight = {k:{0:1, 1:0.05}[v] for k,v in dummy_attribute}
     nx.set_edge_attributes(G, values=edge_weight, name='weight')
 
+    # TODO: parameterize this
     edge_type_to_w = {"contact" : 1}
     for group in groups:
         edge_type_to_w[group] = 0.05
@@ -250,28 +241,27 @@ def main(date_str, nodes, edges):
     nx.set_edge_attributes(G, values=edge_weight, name='weight')
 
     # create plot
-    # date_str = datetime.strftime(datetime.now(), '%Y-%m-%d')
-    title = '%s Contact Tracing Visualization' % date_str
+    title = 'Contact Tracing Visualization'  # TODO: better title
 
     pos = node_positions(G)
 
-    edge_alpha = {k:{0:1, 1:0.1}[v] for k,v in nx.get_edge_attributes(G, 'dummy').items()}
+    edge_alpha = {k:{0:1, 1:0.1}[v] for k,v in dummy_attribute}
     nx.set_edge_attributes(G, values=edge_alpha, name='alpha')
-    edge_weight = {k:{0:1, 1:0.01}[v] for k,v in nx.get_edge_attributes(G, 'dummy').items()}
+    edge_weight = {k:{0:1, 1:0.01}[v] for k,v in dummy_attribute}
     nx.set_edge_attributes(G, values=edge_weight, name='weight')
 
     tab1 = create_plot(title, 'All', G, pos)
 
-    edge_alpha = {k:{0:1, 1:0}[v] for k,v in nx.get_edge_attributes(G, 'dummy').items()}
+    edge_alpha = {k:{0:1, 1:0}[v] for k,v in dummy_attribute}
     nx.set_edge_attributes(G, values=edge_alpha, name='alpha')
-    edge_weight = {k:{0:1, 1:0}[v] for k,v in nx.get_edge_attributes(G, 'dummy').items()}
+    edge_weight = {k:{0:1, 1:0}[v] for k,v in dummy_attribute}
     nx.set_edge_attributes(G, values=edge_weight, name='weight')
 
     tab2 = create_plot(title, 'Contact Traces', G, pos)
 
-    edge_alpha = {k:{0:0, 1:0.2}[v] for k,v in nx.get_edge_attributes(G, 'dummy').items()}
+    edge_alpha = {k:{0:0, 1:0.2}[v] for k,v in dummy_attribute}
     nx.set_edge_attributes(G, values=edge_alpha, name='alpha')
-    edge_weight = {k:{0:0, 1:1}[v] for k,v in nx.get_edge_attributes(G, 'dummy').items()}
+    edge_weight = {k:{0:0, 1:1}[v] for k,v in dummy_attribute}
     nx.set_edge_attributes(G, values=edge_weight, name='weight')
 
     tab3 = create_plot(title, 'Groups', G, pos)
