@@ -3,6 +3,7 @@ import pkgutil
 import networkx as nx
 import pandas as pd
 import numpy as np
+import datetime
 from typing import List
 
 # bokeh imports
@@ -53,7 +54,7 @@ INSTRUCTIONS_HTML = pkgutil.get_data(__name__, "resources/instructions.html") \
 
 
 def contact_graph(nodes: pd.DataFrame, edges: pd.DataFrame,
-                  membership_cols: List[str] = None) -> nx.Graph:
+                  membership_cols: List[str] = []) -> nx.Graph:
     """Return a graph representing the contact tracing data.
 
     Edges are given an "edge_type" attribute which is "contact" for contact
@@ -174,22 +175,22 @@ def _tab(title, tab_name, G, nodes, pos):
     return Panel(child=plot, title=tab_name)
 
 
-def main(date_str, nodes, edges, start, end):
+def visualization(title: str, file_name: str, G: nx.Graph, nodes: pd.DataFrame,
+                  start: datetime.date, end: datetime.date,
+                  membership_cols: List[str] = []):
+    """Write an HTML visualization of the given contact tracing graph.
 
-    def node_positions(G):
-        """Generate node posititions."""
-        pos = nx.spring_layout(G, k=0.13, weight='weight',
-                               seed=1, iterations=150)
-        xs = {k: v[0] for k,v in pos.items()}
-        ys = {k: v[1] for k,v in pos.items()}
-        nodes['x'] = nodes['id'].apply(lambda x: xs[x])
-        nodes['y'] = nodes['id'].apply(lambda x: ys[x])
-        return pos
-
-    groups = ["group_1", "group_2", "group_3"]
-    G = contact_graph(nodes, edges, membership_cols=groups)
-
-    # TODO: remove this later
+    Args:
+        title (str): Title of the visualization.
+        file_name (str): Name of the file to be written.
+        G (nx.Graph): NetworkX graph with contact tracing data.
+        nodes (pd.DataFrame): Dataframe with nodes.
+        start (datetime.date): Start date (show cases outside the 2 weeks \
+            leading up to this data as inactive (blue) on the visualization).
+        end (datetime.date): End date (show cases after this data as inactive \
+            (blue) on the visualization).
+        membership_cols (List[str]): List of columns recognized as memberships.
+    """
     nodes = nodes.reset_index().rename(columns={'index': 'id'})
 
     # set node color of positive cases
@@ -224,10 +225,12 @@ def main(date_str, nodes, edges, start, end):
         alpha = {k:{0:contact, 1:dummy}[v] for k,v in dummy_attribute}
         nx.set_edge_attributes(G, values=alpha, name=name)
 
-    # create plot
-    title = 'Contact Tracing Visualization'  # TODO: better title
-
-    pos = node_positions(G)
+    pos = nx.spring_layout(G, k=0.13, weight="weight",
+                           seed=1, iterations=150)
+    xs = {k: v[0] for k,v in pos.items()}
+    ys = {k: v[1] for k,v in pos.items()}
+    nodes["x"] = nodes["id"].apply(lambda x: xs[x])
+    nodes["y"] = nodes["id"].apply(lambda x: ys[x])
 
     edge_alpha = {k:{0:EDGE_ALPHA_CONTACT, 1:EDGE_ALPHA_DUMMY}[v]
                   for k,v in dummy_attribute}
@@ -247,7 +250,7 @@ def main(date_str, nodes, edges, start, end):
 
     tabs = [tab1, tab2, tab3]
 
-    for group in groups:
+    for group in membership_cols:
         edge_alpha = {k:(EDGE_ALPHA_DUMMY if v == group else 0)
                       for k,v in nx.get_edge_attributes(G,'edge_type').items()}
         nx.set_edge_attributes(G, values=edge_alpha, name='alpha')
@@ -257,5 +260,5 @@ def main(date_str, nodes, edges, start, end):
     plot = Tabs(tabs=tabs)
 
     # export
-    output_file(date_str, title=date_str)
+    output_file(file_name, title=title)
     save(plot)
