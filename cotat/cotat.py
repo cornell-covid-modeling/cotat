@@ -22,7 +22,6 @@ GRAPH_PLOT_WIDTH = 1500
 INSTRUCTIONS_PLOT_HEIGHT = 50
 INSTRUCTIONS_PLOT_WIDTH = 1500
 
-
 POSITIVE_COLOR = "#DC0000"
 NEGATIVE_COLOR = "#65ADFF"
 NODE_ALPHA_DEFAULT = 1
@@ -39,6 +38,9 @@ EDGE_DASH_DUMMY = [5,5]
 EDGE_WEIGHT_CONTACT = 1
 EDGE_WEIGHT_DUMMY = 0.05
 EDGE_LINE_WIDTH = 3
+
+LABEL_OFFSET = 3
+LABEL_TEXT_SIZE = "12px"
 
 BUTTON_JS = pkgutil.get_data(__name__, "resources/button.js") \
                    .decode().format(**globals())
@@ -128,6 +130,17 @@ def _graph_renderer(G, pos):
     return graph_renderer
 
 
+def _case_labels(nodes):
+    """Return LabelSet object with case number labels for given nodes."""
+    cases = nodes[~nodes["case"].isna()][["x", "y", "case"]]
+    cases["case"] = cases["case"].astype(int).astype(str)
+    case_labels = ColumnDataSource(data=cases)
+    return LabelSet(x="x", y="y", text="case",
+                    x_offset=LABEL_OFFSET, y_offset=LABEL_OFFSET,
+                    text_font_size=LABEL_TEXT_SIZE,
+                    source=case_labels, render_mode="canvas")
+
+
 def main(date_str, nodes, edges, start, end):
 
     def node_positions(G):
@@ -139,17 +152,6 @@ def main(date_str, nodes, edges, start, end):
         nodes['x'] = nodes['id'].apply(lambda x: xs[x])
         nodes['y'] = nodes['id'].apply(lambda x: ys[x])
         return pos
-
-    def add_case_labels(plot):
-        """Add case labels to plot."""
-        cases = nodes[~nodes['case'].isna()][['x','y','case']]
-        cases['case'] = cases['case'].astype(int).astype(str)
-        case_labels = ColumnDataSource(data=cases)
-        labels = LabelSet(x='x', y='y', text='case',
-                          x_offset=3, y_offset=3,
-                          text_font_size='12px',
-                          source=case_labels, render_mode='canvas')
-        plot.add_layout(labels)
 
     def add_hover_labels(plot, graph_renderer):
         """Add hover labels to plot."""
@@ -164,7 +166,7 @@ def main(date_str, nodes, edges, start, end):
                         GRAPH_PLOT_WIDTH)
         graph_renderer = _graph_renderer(G, pos)
         p.renderers.append(graph_renderer)
-        add_case_labels(p)
+        p.add_layout(_case_labels(nodes))
         add_hover_labels(p, graph_renderer)
 
         node_source = graph_renderer.node_renderer.data_source
