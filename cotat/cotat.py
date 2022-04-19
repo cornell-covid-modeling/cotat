@@ -17,6 +17,12 @@ from bokeh.models import (HoverTool, ColumnDataSource, LabelSet, TextInput,
 # CONSTANTS
 # =============================
 
+GRAPH_PLOT_HEIGHT = 700
+GRAPH_PLOT_WIDTH = 1500
+INSTRUCTIONS_PLOT_HEIGHT = 50
+INSTRUCTIONS_PLOT_WIDTH = 1500
+
+
 POSITIVE_COLOR = "#DC0000"
 NEGATIVE_COLOR = "#65ADFF"
 NODE_ALPHA_DEFAULT = 1
@@ -91,6 +97,23 @@ def contact_graph(nodes: pd.DataFrame, edges: pd.DataFrame,
     return G
 
 
+def _blank_plot(name, plot_height, plot_width):
+    """Create """
+    plot = figure(title=name,
+                  plot_width=plot_width,
+                  plot_height=plot_height,
+                  tools="pan, wheel_zoom, box_zoom, reset")
+    plot.toolbar.logo = None
+    plot.xgrid.grid_line_color = None
+    plot.ygrid.grid_line_color = None
+    plot.xaxis.visible = False
+    plot.yaxis.visible = False
+    plot.background_fill_color = None
+    plot.border_fill_color = None
+    plot.outline_line_color = None
+    return plot
+
+
 def main(date_str, nodes, edges, start, end):
 
     def node_positions(G):
@@ -102,22 +125,6 @@ def main(date_str, nodes, edges, start, end):
         nodes['x'] = nodes['id'].apply(lambda x: xs[x])
         nodes['y'] = nodes['id'].apply(lambda x: ys[x])
         return pos
-
-    def blank_tab_plot(name, plot_width=1500, plot_height=700):
-        """Create a blank for a tab."""
-        plot = figure(title=name,
-                      plot_width=plot_width,
-                      plot_height=plot_height,
-                      tools="pan,wheel_zoom,box_zoom,reset")
-        plot.toolbar.logo = None
-        plot.xgrid.grid_line_color = None
-        plot.ygrid.grid_line_color = None
-        plot.xaxis.visible = False
-        plot.yaxis.visible = False
-        plot.background_fill_color = None
-        plot.border_fill_color = None
-        plot.outline_line_color = None
-        return plot
 
     def create_graph_renderer(G, pos):
         """Return a graph renderer for graph G with node positions pos."""
@@ -152,7 +159,8 @@ def main(date_str, nodes, edges, start, end):
         plot.tools.append(node_hover)
 
     def create_plot(title, tab_name, G, pos):
-        p = blank_tab_plot('%s:  %s' % (title, tab_name))
+        p = _blank_plot('%s:  %s' % (title, tab_name), GRAPH_PLOT_HEIGHT,
+                        GRAPH_PLOT_WIDTH)
         graph_renderer = create_graph_renderer(G, pos)
         p.renderers.append(graph_renderer)
         add_case_labels(p)
@@ -170,7 +178,8 @@ def main(date_str, nodes, edges, start, end):
         text_input.js_on_change("value", CustomJS(args={'source': node_source},
                                                   code=text_code))
 
-        instructions = blank_tab_plot("", plot_width=1500, plot_height=50)
+        instructions = _blank_plot("", INSTRUCTIONS_PLOT_HEIGHT,
+                                   INSTRUCTIONS_PLOT_WIDTH)
         instructions.title.text_font_size = '0pt'
         instructions.toolbar_location = None
         instructions.min_border_top = 0
