@@ -186,27 +186,6 @@ def main(date_str, nodes, edges, start, end):
         nodes['y'] = nodes['id'].apply(lambda x: ys[x])
         return pos
 
-    # TODO: factor this out as a helper method
-    # limit nodes
-    limit = False
-    limit_all = False
-    if limit:
-        group_name = 'employee'
-        group_of_interest = 1
-        node_indices = \
-            list(nodes[nodes[group_name] == group_of_interest].index)
-
-        if limit_all:
-            edges = edges[(edges['source'].isin(node_indices)) &
-                          (edges['target'].isin(node_indices))]
-        else:
-            edges = edges[(edges['source'].isin(node_indices)) |
-                          (edges['target'].isin(node_indices))]
-            adjacent = set(edges['source']).union(set(edges['target']))
-            node_indices = set(node_indices).union(set(adjacent))
-
-        nodes = nodes.iloc[list(node_indices)]
-
     groups = ["group_1", "group_2", "group_3"]
     G = contact_graph(nodes, edges, membership_cols=groups)
 
