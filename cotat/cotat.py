@@ -53,8 +53,8 @@ INSTRUCTIONS_HTML = pkgutil.get_data(__name__, "resources/instructions.html") \
 # =============================
 
 
-def contact_graph(nodes: pd.DataFrame, edges: pd.DataFrame,
-                  membership_cols: List[str] = []) -> nx.Graph:
+def _contact_graph(nodes: pd.DataFrame, edges: pd.DataFrame,
+                   membership_cols: List[str] = []) -> nx.Graph:
     """Return a graph representing the contact tracing data.
 
     Edges are given an "edge_type" attribute which is "contact" for contact
@@ -118,9 +118,9 @@ def _blank_plot(name, plot_height, plot_width):
     return plot
 
 
-def _graph_renderer(G, pos):
-    """Return a graph renderer for graph G with node positions pos."""
-    graph_renderer = from_networkx(G, pos)
+def _graph_renderer(G):
+    """Return a graph renderer for graph G."""
+    graph_renderer = from_networkx(G, nx.get_node_attributes(G, "pos"))
     graph_renderer.node_renderer.glyph = Circle(size="size",
                                                 fill_color="color",
                                                 fill_alpha="alpha",
@@ -131,32 +131,36 @@ def _graph_renderer(G, pos):
     return graph_renderer
 
 
-def _case_labels(nodes):
+def _case_labels(G):
     """Return LabelSet object with case number labels for given nodes."""
-    cases = nodes[~nodes["case"].isna()][["x", "y", "case"]]
-    cases["case"] = cases["case"].astype(int).astype(str)
-    case_labels = ColumnDataSource(data=cases)
+    case_dict = nx.get_node_attributes(G, "case")
+    case_dict = {k:v for k,v in case_dict.items() if not pd.isnull(v)}
+    ids, case = zip(*case_dict.items())
+    pos_dict = nx.get_node_attributes(G, "pos")
+    pos = [pos_dict[id] for id in ids]
+    x, y = list(zip(*pos))
+    case_labels = ColumnDataSource(data={"x": x, "y": y, "case": case})
     return LabelSet(x="x", y="y", text="case",
                     x_offset=LABEL_OFFSET, y_offset=LABEL_OFFSET,
                     text_font_size=LABEL_TEXT_SIZE,
                     source=case_labels, render_mode="canvas")
 
 
-def _hover_labels(nodes, graph_renderer):
+def _hover_labels(G, graph_renderer, attributes):
     """Add hover labels to plot."""
-    tooltips = [(attr, f"@{attr}") for attr in nodes.columns[1:]]
+    tooltips = [(attr, f"@{attr}") for attr in attributes]
     return HoverTool(tooltips=tooltips,
                      renderers=[graph_renderer.node_renderer])
 
 
-def _tab(title, tab_name, G, nodes, pos):
-    """Return a tab (Panel) showing graph G of nodes with position pos."""
+def _tab(title, tab_name, G, attributes):
+    """Return a tab (Panel) showing graph G of nodes"""
     p = _blank_plot(f"{title}: {tab_name}", GRAPH_PLOT_HEIGHT,
                     GRAPH_PLOT_WIDTH)
-    graph_renderer = _graph_renderer(G, pos)
+    graph_renderer = _graph_renderer(G)
     p.renderers.append(graph_renderer)
-    p.add_layout(_case_labels(nodes))
-    p.tools.append(_hover_labels(nodes, graph_renderer))
+    p.add_layout(_case_labels(G))
+    p.tools.append(_hover_labels(G, graph_renderer, attributes))
 
     # add custom JS to button and search bar
     node_source = graph_renderer.node_renderer.data_source
@@ -175,23 +179,28 @@ def _tab(title, tab_name, G, nodes, pos):
     return Panel(child=plot, title=tab_name)
 
 
-def visualization(title: str, file_name: str, G: nx.Graph, nodes: pd.DataFrame,
-                  start: datetime.date, end: datetime.date,
-                  membership_cols: List[str] = []):
+def visualization(title: str, file_name: str, nodes: pd.DataFrame,
+                  edges: pd.DataFrame, start: datetime.date,
+                  end: datetime.date, membership_cols: List[str] = []):
     """Write an HTML visualization of the given contact tracing graph.
+
+    TODO: Description of what tabs are created.
 
     Args:
         title (str): Title of the visualization.
         file_name (str): Name of the file to be written.
         G (nx.Graph): NetworkX graph with contact tracing data.
-        nodes (pd.DataFrame): Dataframe with nodes.
+        nodes (pd.DataFrame): Each row is node with column for every attribute.
+        edges (pd.DataFrame): Dataframe with "source" and "target" columns.
         start (datetime.date): Start date (show cases outside the 2 weeks \
             leading up to this data as inactive (blue) on the visualization).
         end (datetime.date): End date (show cases after this data as inactive \
             (blue) on the visualization).
         membership_cols (List[str]): List of columns recognized as memberships.
     """
-    nodes = nodes.reset_index().rename(columns={'index': 'id'})
+    attributes = nodes.columns
+
+    G = _contact_graph(nodes, edges, membership_cols)
 
     # set node color of positive cases
     nx.set_node_attributes(G, values=9, name='size')
@@ -227,26 +236,23 @@ def visualization(title: str, file_name: str, G: nx.Graph, nodes: pd.DataFrame,
 
     pos = nx.spring_layout(G, k=0.13, weight="weight",
                            seed=1, iterations=150)
-    xs = {k: v[0] for k,v in pos.items()}
-    ys = {k: v[1] for k,v in pos.items()}
-    nodes["x"] = nodes["id"].apply(lambda x: xs[x])
-    nodes["y"] = nodes["id"].apply(lambda x: ys[x])
+    nx.set_node_attributes(G, pos, "pos")
 
     edge_alpha = {k:{0:EDGE_ALPHA_CONTACT, 1:EDGE_ALPHA_DUMMY}[v]
                   for k,v in dummy_attribute}
     nx.set_edge_attributes(G, values=edge_alpha, name='alpha')
 
-    tab1 = _tab(title, 'All', G, nodes, pos)
+    tab1 = _tab(title, 'All', G, attributes)
 
     edge_alpha = {k:{0:EDGE_ALPHA_CONTACT, 1:0}[v] for k,v in dummy_attribute}
     nx.set_edge_attributes(G, values=edge_alpha, name='alpha')
 
-    tab2 = _tab(title, 'Contact Traces', G, nodes, pos)
+    tab2 = _tab(title, 'Contact Traces', G, attributes)
 
     edge_alpha = {k:{0:0, 1:EDGE_ALPHA_DUMMY}[v] for k,v in dummy_attribute}
     nx.set_edge_attributes(G, values=edge_alpha, name='alpha')
 
-    tab3 = _tab(title, 'Groups', G, nodes, pos)
+    tab3 = _tab(title, 'Groups', G, attributes)
 
     tabs = [tab1, tab2, tab3]
 
@@ -255,7 +261,7 @@ def visualization(title: str, file_name: str, G: nx.Graph, nodes: pd.DataFrame,
                       for k,v in nx.get_edge_attributes(G,'edge_type').items()}
         nx.set_edge_attributes(G, values=edge_alpha, name='alpha')
 
-        tabs.append(_tab(title, group, G, nodes, pos))
+        tabs.append(_tab(title, group, G, attributes))
 
     plot = Tabs(tabs=tabs)
 
