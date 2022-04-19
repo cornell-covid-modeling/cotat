@@ -184,7 +184,11 @@ def visualization(title: str, file_name: str, nodes: pd.DataFrame,
                   end: datetime.date, membership_cols: List[str] = []):
     """Write an HTML visualization of the given contact tracing graph.
 
-    TODO: Description of what tabs are created.
+    The visualization has the following tabs:
+    (1) All: all edges (both contact and membership edges) shown
+    (2) Contact Traces: only contact edges are shown
+    (3) Membership: only membership edges are shown
+    Furthermore, there is a membership tab for every membership column passed.
 
     Args:
         title (str): Title of the visualization.
@@ -222,7 +226,7 @@ def visualization(title: str, file_name: str, nodes: pd.DataFrame,
     nx.set_node_attributes(G, values=node_color, name='color')
 
     # set edge properties of dummy vs. actual edges
-    dummy_attribute = nx.get_edge_attributes(G, 'dummy').items()
+    dummy_attribute = nx.get_edge_attributes(G, "dummy").items()
 
     edge_attributes = [
         (EDGE_ALPHA_CONTACT, EDGE_ALPHA_DUMMY, "alpha"),
@@ -234,34 +238,34 @@ def visualization(title: str, file_name: str, nodes: pd.DataFrame,
         alpha = {k:{0:contact, 1:dummy}[v] for k,v in dummy_attribute}
         nx.set_edge_attributes(G, values=alpha, name=name)
 
-    pos = nx.spring_layout(G, k=0.13, weight="weight",
-                           seed=1, iterations=150)
+    pos = nx.spring_layout(G, k=0.13, weight="weight", seed=1, iterations=150)
     nx.set_node_attributes(G, pos, "pos")
 
+    # all edges
     edge_alpha = {k:{0:EDGE_ALPHA_CONTACT, 1:EDGE_ALPHA_DUMMY}[v]
                   for k,v in dummy_attribute}
-    nx.set_edge_attributes(G, values=edge_alpha, name='alpha')
+    nx.set_edge_attributes(G, values=edge_alpha, name="alpha")
+    tab1 = _tab(title, "All", G, attributes)
 
-    tab1 = _tab(title, 'All', G, attributes)
-
+    # only contact edges
     edge_alpha = {k:{0:EDGE_ALPHA_CONTACT, 1:0}[v] for k,v in dummy_attribute}
-    nx.set_edge_attributes(G, values=edge_alpha, name='alpha')
+    nx.set_edge_attributes(G, values=edge_alpha, name="alpha")
+    tab2 = _tab(title, "Contact Traces", G, attributes)
 
-    tab2 = _tab(title, 'Contact Traces', G, attributes)
-
+    # only group edges
     edge_alpha = {k:{0:0, 1:EDGE_ALPHA_DUMMY}[v] for k,v in dummy_attribute}
     nx.set_edge_attributes(G, values=edge_alpha, name='alpha')
-
-    tab3 = _tab(title, 'Groups', G, attributes)
+    tab3 = _tab(title, "Membership", G, attributes)
 
     tabs = [tab1, tab2, tab3]
 
-    for group in membership_cols:
-        edge_alpha = {k:(EDGE_ALPHA_DUMMY if v == group else 0)
+    # tab for every membership column
+    for membership in membership_cols:
+        edge_alpha = {k:(EDGE_ALPHA_DUMMY if v == membership else 0)
                       for k,v in nx.get_edge_attributes(G,'edge_type').items()}
         nx.set_edge_attributes(G, values=edge_alpha, name='alpha')
 
-        tabs.append(_tab(title, group, G, attributes))
+        tabs.append(_tab(title, membership, G, attributes))
 
     plot = Tabs(tabs=tabs)
 
