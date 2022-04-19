@@ -141,6 +141,13 @@ def _case_labels(nodes):
                     source=case_labels, render_mode="canvas")
 
 
+def _hover_labels(nodes, graph_renderer):
+    """Add hover labels to plot."""
+    tooltips = [(attr, f"@{attr}") for attr in nodes.columns[1:]]
+    return HoverTool(tooltips=tooltips,
+                     renderers=[graph_renderer.node_renderer])
+
+
 def main(date_str, nodes, edges, start, end):
 
     def node_positions(G):
@@ -153,21 +160,13 @@ def main(date_str, nodes, edges, start, end):
         nodes['y'] = nodes['id'].apply(lambda x: ys[x])
         return pos
 
-    def add_hover_labels(plot, graph_renderer):
-        """Add hover labels to plot."""
-        tooltips = [(attr, f"@{attr}") for attr in nodes.columns[1:]]
-        node_hover = HoverTool(tooltips=tooltips,
-                               renderers=[graph_renderer.node_renderer])
-
-        plot.tools.append(node_hover)
-
     def create_plot(title, tab_name, G, pos):
         p = _blank_plot('%s:  %s' % (title, tab_name), GRAPH_PLOT_HEIGHT,
                         GRAPH_PLOT_WIDTH)
         graph_renderer = _graph_renderer(G, pos)
         p.renderers.append(graph_renderer)
         p.add_layout(_case_labels(nodes))
-        add_hover_labels(p, graph_renderer)
+        p.tools.append(_hover_labels(nodes, graph_renderer))
 
         node_source = graph_renderer.node_renderer.data_source
 
