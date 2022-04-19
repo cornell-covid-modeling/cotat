@@ -148,6 +148,32 @@ def _hover_labels(nodes, graph_renderer):
                      renderers=[graph_renderer.node_renderer])
 
 
+def _tab(title, tab_name, G, nodes, pos):
+    """Return a tab (Panel) showing graph G of nodes with position pos."""
+    p = _blank_plot(f"{title}: {tab_name}", GRAPH_PLOT_HEIGHT,
+                    GRAPH_PLOT_WIDTH)
+    graph_renderer = _graph_renderer(G, pos)
+    p.renderers.append(graph_renderer)
+    p.add_layout(_case_labels(nodes))
+    p.tools.append(_hover_labels(nodes, graph_renderer))
+
+    # add custom JS to button and search bar
+    node_source = graph_renderer.node_renderer.data_source
+    button = Button(label="Reset", button_type="default")
+    button.js_on_click(CustomJS(args={"source": node_source}, code=BUTTON_JS))
+    text_input = TextInput(value="case_number", title="Search Case:")
+    text_input.js_on_change("value", CustomJS(args={"source": node_source},
+                                              code=SEARCH_JS))
+
+    # aggregate plot
+    plot = gridplot([[p],
+                     [row(text_input, button, sizing_mode="stretch_both")],
+                     [Div(text=INSTRUCTIONS_HTML)]],
+                    toolbar_options={'logo': None})
+
+    return Panel(child=plot, title=tab_name)
+
+
 def main(date_str, nodes, edges, start, end):
 
     def node_positions(G):
@@ -159,42 +185,6 @@ def main(date_str, nodes, edges, start, end):
         nodes['x'] = nodes['id'].apply(lambda x: xs[x])
         nodes['y'] = nodes['id'].apply(lambda x: ys[x])
         return pos
-
-    def create_plot(title, tab_name, G, pos):
-        p = _blank_plot('%s:  %s' % (title, tab_name), GRAPH_PLOT_HEIGHT,
-                        GRAPH_PLOT_WIDTH)
-        graph_renderer = _graph_renderer(G, pos)
-        p.renderers.append(graph_renderer)
-        p.add_layout(_case_labels(nodes))
-        p.tools.append(_hover_labels(nodes, graph_renderer))
-
-        node_source = graph_renderer.node_renderer.data_source
-
-        button_code = BUTTON_JS
-        text_code = SEARCH_JS
-
-        button = Button(label="Reset", button_type="default")
-        button.js_on_click(CustomJS(args={'source': node_source},
-                                    code=button_code))
-        text_input = TextInput(value="case_number", title="Search Case:")
-        text_input.js_on_change("value", CustomJS(args={'source': node_source},
-                                                  code=text_code))
-
-        instructions = _blank_plot("", INSTRUCTIONS_PLOT_HEIGHT,
-                                   INSTRUCTIONS_PLOT_WIDTH)
-        instructions.title.text_font_size = '0pt'
-        instructions.toolbar_location = None
-        instructions.min_border_top = 0
-
-        text = INSTRUCTIONS_HTML
-        instructions = Div(text=text)
-
-        plot = gridplot([[p],
-                         [row(text_input, button, sizing_mode='stretch_both')],
-                         [instructions]],
-                        toolbar_options={'logo': None})
-
-        return Panel(child=plot, title=tab_name)
 
     # TODO: factor this out as a helper method
     # limit nodes
@@ -264,17 +254,17 @@ def main(date_str, nodes, edges, start, end):
                   for k,v in dummy_attribute}
     nx.set_edge_attributes(G, values=edge_alpha, name='alpha')
 
-    tab1 = create_plot(title, 'All', G, pos)
+    tab1 = _tab(title, 'All', G, nodes, pos)
 
     edge_alpha = {k:{0:EDGE_ALPHA_CONTACT, 1:0}[v] for k,v in dummy_attribute}
     nx.set_edge_attributes(G, values=edge_alpha, name='alpha')
 
-    tab2 = create_plot(title, 'Contact Traces', G, pos)
+    tab2 = _tab(title, 'Contact Traces', G, nodes, pos)
 
     edge_alpha = {k:{0:0, 1:EDGE_ALPHA_DUMMY}[v] for k,v in dummy_attribute}
     nx.set_edge_attributes(G, values=edge_alpha, name='alpha')
 
-    tab3 = create_plot(title, 'Groups', G, pos)
+    tab3 = _tab(title, 'Groups', G, nodes, pos)
 
     tabs = [tab1, tab2, tab3]
 
@@ -283,7 +273,7 @@ def main(date_str, nodes, edges, start, end):
                       for k,v in nx.get_edge_attributes(G,'edge_type').items()}
         nx.set_edge_attributes(G, values=edge_alpha, name='alpha')
 
-        tabs.append(create_plot(title, group, G, pos))
+        tabs.append(_tab(title, group, G, nodes, pos))
 
     plot = Tabs(tabs=tabs)
 
