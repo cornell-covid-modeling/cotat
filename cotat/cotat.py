@@ -38,6 +38,7 @@ EDGE_DASH_CONTACT = []
 EDGE_DASH_DUMMY = [5,5]
 EDGE_WEIGHT_CONTACT = 1
 EDGE_WEIGHT_DUMMY = 0.05
+EDGE_LINE_WIDTH = 3
 
 BUTTON_JS = pkgutil.get_data(__name__, "resources/button.js") \
                    .decode().format(**globals())
@@ -98,7 +99,7 @@ def contact_graph(nodes: pd.DataFrame, edges: pd.DataFrame,
 
 
 def _blank_plot(name, plot_height, plot_width):
-    """Create """
+    """Create a blank plot with default configurations set."""
     plot = figure(title=name,
                   plot_width=plot_width,
                   plot_height=plot_height,
@@ -114,6 +115,19 @@ def _blank_plot(name, plot_height, plot_width):
     return plot
 
 
+def _graph_renderer(G, pos):
+    """Return a graph renderer for graph G with node positions pos."""
+    graph_renderer = from_networkx(G, pos)
+    graph_renderer.node_renderer.glyph = Circle(size="size",
+                                                fill_color="color",
+                                                fill_alpha="alpha",
+                                                line_alpha="alpha")
+    graph_renderer.edge_renderer.glyph = MultiLine(line_width=EDGE_LINE_WIDTH,
+                                                   line_alpha="alpha",
+                                                   line_dash="dash")
+    return graph_renderer
+
+
 def main(date_str, nodes, edges, start, end):
 
     def node_positions(G):
@@ -125,19 +139,6 @@ def main(date_str, nodes, edges, start, end):
         nodes['x'] = nodes['id'].apply(lambda x: xs[x])
         nodes['y'] = nodes['id'].apply(lambda x: ys[x])
         return pos
-
-    def create_graph_renderer(G, pos):
-        """Return a graph renderer for graph G with node positions pos."""
-        graph_renderer = from_networkx(G, pos)
-        graph_renderer.node_renderer.glyph = Circle(size="size",
-                                                    fill_color='color',
-                                                    fill_alpha='alpha',
-                                                    line_alpha='alpha')
-        graph_renderer.edge_renderer.glyph = MultiLine(line_width=3,
-                                                       line_alpha='alpha',
-                                                       line_dash='dash')
-
-        return graph_renderer
 
     def add_case_labels(plot):
         """Add case labels to plot."""
@@ -161,7 +162,7 @@ def main(date_str, nodes, edges, start, end):
     def create_plot(title, tab_name, G, pos):
         p = _blank_plot('%s:  %s' % (title, tab_name), GRAPH_PLOT_HEIGHT,
                         GRAPH_PLOT_WIDTH)
-        graph_renderer = create_graph_renderer(G, pos)
+        graph_renderer = _graph_renderer(G, pos)
         p.renderers.append(graph_renderer)
         add_case_labels(p)
         add_hover_labels(p, graph_renderer)
