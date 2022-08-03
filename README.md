@@ -1,4 +1,4 @@
-# COntact Tracing Analysis Tool
+# <img alt="cotat" src="branding/cotat_color.png" height="90">
 
 [![CircleCI](https://circleci.com/gh/cornell-covid-modeling/cotat/tree/master.svg?style=shield&circle-token=97897740e926742355ec6f2809bb29815c07a1fb)](https://circleci.com/gh/cornell-covid-modeling/cotat/tree/master)
 [![codecov](https://codecov.io/gh/cornell-covid-modeling/cotat/branch/master/graph/badge.svg?token=59BOEOE7TB)](https://codecov.io/gh/cornell-covid-modeling/cotat)

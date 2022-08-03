@@ -141,3 +141,6 @@ cython_debug/
 
 test.ipynb
 test.html
+
+# Source files for branding
+branding/src
