@@ -53,6 +53,41 @@ INSTRUCTIONS_HTML = pkgutil.get_data(__name__, "resources/instructions.html") \
 # =============================
 
 
+def _prune(nodes_df: pd.DataFrame, edges_df: pd.DataFrame,
+           start: datetime.date, end: datetime.date) -> List[pd.DataFrame]:
+    """Return only the nodes and edges relevant to the given time range.
+
+    The nodes infected during
+
+    Args:
+        nodes_df (pd.DataFrame): The full set of nodes.
+        edges_df (pd.DataFrame): The full set of edges.
+        start (datetime.date): The start date of the time range.
+        end (datetime.date): The end data of the time range.
+
+    Returns:
+        List[pd.DataFrame]: The pruned dataframes of nodes and edges.
+    """
+    infected_df = nodes_df[~nodes_df.date.isna()]
+    infected_in_range = list(infected_df[(start <= infected_df.date) &
+                                         (infected_df.date <= end)].index)
+
+    nodes = infected_in_range
+    edges = []
+    for i,j in edges_df.apply(lambda x: (x.source, x.target), axis=1):
+        if i in infected_in_range and j not in nodes:
+            nodes.append(j)
+            edges.append((i,j))
+        elif j in infected_in_range and i not in nodes:
+            nodes.append(i)
+            edges.append((i,j))
+
+    pruned_nodes_df = nodes_df.loc[nodes]
+    pruned_edges_df = pd.DataFrame([{"source":i, "target":j} for i,j in edges])
+
+    return pruned_nodes_df, pruned_edges_df
+
+
 def _contact_graph(nodes: pd.DataFrame, edges: pd.DataFrame,
                    membership_cols: List[str] = []) -> nx.Graph:
     """Return a graph representing the contact tracing data.
@@ -201,6 +236,8 @@ def visualization(title: str, file_name: str, nodes: pd.DataFrame,
     """
     attributes = nodes.columns
 
+    # prune and initialize contact graph
+    nodes, edges = _prune(nodes, edges, start, end)
     G = _contact_graph(nodes, edges, membership_cols)
 
     # set node color of positive cases
