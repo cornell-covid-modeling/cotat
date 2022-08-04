@@ -18,13 +18,10 @@ a contact between those individuals has not been reported.
 
 ## Installation
 
-This Python package is not yet posted on [PyPI](https://pypi.org). Hence,
-the best way to get started is by cloning the repo and pip installing.
+The quickest way to get started is with a pip install.
 
 ```
-git clone git@github.com:cornell-covid-modeling/cotat.git
-cd cotat
-pip install -e .
+pip install cotat
 ```
 
 ## License
