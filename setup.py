@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name="cotat",
-    version="0.0.1",
+    version="0.1.0",
     author="Cornell Covid Modeling Team",
     author_email="hwr26@cornell.edu",
     description="",
