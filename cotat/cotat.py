@@ -238,6 +238,12 @@ def visualization(title: str, file_name: str, nodes: pd.DataFrame,
     pos = nx.spring_layout(G, k=0.13, weight="weight", seed=1, iterations=150)
     nx.set_node_attributes(G, pos, "pos")
 
+    # Add date range to title
+    date_format = r'%-m/%-d/%Y'
+    start_str = start.strftime(date_format)
+    end_str = end.strftime(date_format)
+    title = f"{title} [{start_str} - {end_str}]"
+
     # all edges
     edge_alpha = {k:{0:EDGE_ALPHA_CONTACT, 1:EDGE_ALPHA_DUMMY}[v]
                   for k,v in dummy_attribute}
