@@ -81,10 +81,8 @@ def _contact_graph(nodes: pd.DataFrame, edges: pd.DataFrame,
     G = nx.from_pandas_edgelist(edges, edge_attr=["dummy", "edge_type"])
 
     # node attributes
-    nodes = nodes.reset_index().rename(columns={'index': 'id'})
-    G.add_nodes_from(nodes["id"])
-    node_attr = nodes.set_index("id").to_dict("index")
-    nx.set_node_attributes(G, node_attr)
+    G.add_nodes_from(list(nodes.index))
+    nx.set_node_attributes(G, nodes.to_dict("index"))
 
     # add membership dummy edges
     for membership_col in membership_cols:
