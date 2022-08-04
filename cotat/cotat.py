@@ -153,8 +153,7 @@ def _hover_labels(G, graph_renderer, attributes):
 
 def _tab(title, tab_name, G, attributes):
     """Return a tab (Panel) showing graph G of nodes"""
-    p = _blank_plot(f"{title}: {tab_name}", GRAPH_PLOT_HEIGHT,
-                    GRAPH_PLOT_WIDTH)
+    p = _blank_plot(title, GRAPH_PLOT_HEIGHT, GRAPH_PLOT_WIDTH)
     graph_renderer = _graph_renderer(G)
     p.renderers.append(graph_renderer)
     p.add_layout(_case_labels(G))
