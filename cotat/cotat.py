@@ -205,7 +205,9 @@ def _tab(title, tab_name, G, attributes):
     # aggregate plot
     plot = gridplot([[p],
                      [row(text_input, button, sizing_mode="stretch_both")],
-                     [Div(text=INSTRUCTIONS_HTML)]],
+                     [Div(text=INSTRUCTIONS_HTML,
+                          styles={"overflow-wrap": "break-word",
+                                  "width": f"{INSTRUCTIONS_PLOT_WIDTH}px"})]],
                     toolbar_options={'logo': None})
 
     return TabPanel(child=plot, title=tab_name)
