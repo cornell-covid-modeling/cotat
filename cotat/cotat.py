@@ -11,8 +11,8 @@ from bokeh.plotting import figure, output_file, save
 from bokeh.layouts import row, gridplot
 from bokeh.plotting import from_networkx
 from bokeh.models import (HoverTool, ColumnDataSource, LabelSet, TextInput,
-                          Div, Button, CustomJS, Circle, MultiLine,
-                          Panel, Tabs)
+                          Div, Button, CustomJS, Circle, MultiLine, TabPanel,
+                          Tabs)
 
 # =============================
 # CONSTANTS
@@ -134,11 +134,11 @@ def _contact_graph(nodes: pd.DataFrame, edges: pd.DataFrame,
     return G
 
 
-def _blank_plot(name, plot_height, plot_width):
+def _blank_plot(name, height, width):
     """Create a blank plot with default configurations set."""
     plot = figure(title=name,
-                  plot_width=plot_width,
-                  plot_height=plot_height,
+                  width=width,
+                  height=height,
                   tools="pan, wheel_zoom, box_zoom, reset")
     plot.toolbar.logo = None
     plot.xgrid.grid_line_color = None
@@ -176,7 +176,7 @@ def _case_labels(G):
     return LabelSet(x="x", y="y", text="case",
                     x_offset=LABEL_OFFSET, y_offset=LABEL_OFFSET,
                     text_font_size=LABEL_TEXT_SIZE,
-                    source=case_labels, render_mode="canvas")
+                    source=case_labels)
 
 
 def _hover_labels(G, graph_renderer, attributes):
@@ -208,7 +208,7 @@ def _tab(title, tab_name, G, attributes):
                      [Div(text=INSTRUCTIONS_HTML)]],
                     toolbar_options={'logo': None})
 
-    return Panel(child=plot, title=tab_name)
+    return TabPanel(child=plot, title=tab_name)
 
 
 def visualization(title: str, file_name: str, nodes: pd.DataFrame,

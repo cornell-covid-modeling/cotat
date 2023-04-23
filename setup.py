@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name="cotat",
-    version="0.1.0",
+    version="0.2.0",
     author="Cornell Covid Modeling Team",
     author_email="hwr26@cornell.edu",
     description="",
@@ -28,7 +28,7 @@ setup(
         "numpy>=1.20",
         "pandas>=1.2",
         "networkx>=2.5",
-        "bokeh>=2.3"
+        "bokeh>=3"
     ],
     extras_require={
         "dev": ['pytest>=5',
