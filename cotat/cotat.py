@@ -69,8 +69,8 @@ def _prune(nodes_df: pd.DataFrame, edges_df: pd.DataFrame,
         List[pd.DataFrame]: The pruned dataframes of nodes and edges.
     """
     infected_df = nodes_df[~nodes_df.date.isna()]
-    infected_in_range = list(infected_df[(start <= infected_df.date) &
-                                         (infected_df.date <= end)].index)
+    infected_in_range = list(infected_df[(start <= infected_df.date)
+                                         & (infected_df.date <= end)].index)
 
     nodes = infected_in_range
     edges = []
