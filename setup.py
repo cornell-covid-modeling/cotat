@@ -28,7 +28,7 @@ setup(
         "numpy>=1.20",
         "pandas>=1.2",
         "networkx>=2.5",
-        "bokeh>=3"
+        "bokeh>=3.4"
     ],
     extras_require={
         "dev": ['pytest>=5',

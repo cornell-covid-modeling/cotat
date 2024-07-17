@@ -26,11 +26,11 @@ INSTRUCTIONS_PLOT_WIDTH = 1500
 POSITIVE_COLOR = "#DC0000"
 NEGATIVE_COLOR = "#65ADFF"
 NODE_ALPHA_DEFAULT = 1
-NODE_SIZE_DEFAULT = 9
 NODE_ALPHA_SELECTED = 1
-NODE_SIZE_SELECTED = 16
+NODE_SIZE_SELECTED = 10
 NODE_ALPHA_UNSELECTED = 0.4
-NODE_SIZE_UNSELECTED = 9
+NODE_SIZE_UNSELECTED = 6
+NODE_SIZE_DEFAULT = NODE_SIZE_UNSELECTED
 
 EDGE_ALPHA_CONTACT = 1
 EDGE_ALPHA_DUMMY = 0.2
@@ -154,7 +154,8 @@ def _blank_plot(name, height, width):
 def _graph_renderer(G):
     """Return a graph renderer for graph G."""
     graph_renderer = from_networkx(G, nx.get_node_attributes(G, "pos"))
-    graph_renderer.node_renderer.glyph = Circle(size="size",
+    graph_renderer.node_renderer.glyph = Circle(radius="size",
+                                                radius_units="screen",
                                                 fill_color="color",
                                                 fill_alpha="alpha",
                                                 line_alpha="alpha")
@@ -243,7 +244,7 @@ def visualization(title: str, file_name: str, nodes: pd.DataFrame,
     G = _contact_graph(nodes, edges, membership_cols)
 
     # set node color of positive cases
-    nx.set_node_attributes(G, values=9, name='size')
+    nx.set_node_attributes(G, values=NODE_SIZE_DEFAULT, name='size')
 
     offset = 14  # days (2 weeks)
     alphas = list(np.linspace(0.5, 1, (end - start).days + offset + 1))
